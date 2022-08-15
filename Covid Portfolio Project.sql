@@ -1,108 +1,113 @@
 -- select data that we are going to be starting with
 
-select location, date, population, total_cases,total_deaths 
-from coviddeath where continent is not null
+SELECT location, date, population, total_cases,total_deaths 
+FROM coviddeath 
+WHERE continent IS NOT null
 
 
 -- Total Cases vs Total Deaths
 -- Shows likelihood of dying if you contract covid in your country
 
-select location, date, population, total_cases,total_deaths, 
-(cast(total_deaths as numeric)/cast(total_cases as numeric))*100 as "Death Rate"
-from coviddeath 
-where location = 'Malaysia'
-and continent is not null
-order by date
+SELECT location, date, population, total_cases,total_deaths, 
+(cast(total_deaths as numeric)/cast(total_cases as numeric))*100 AS "Death Rate"
+FROM coviddeath 
+WHERE location = 'Malaysia'
+AND continent IS NOT null
+ORDER BY date
 
 -- Total Cases vs Population
 -- Shows the percentage of covid infection over population
 
-select location, date, total_cases, population, 
-(cast(total_cases as numeric)/cast(population as numeric))*100 as "Infection Rate"
-from coviddeath
---where location = 'Malaysia'
-where continent is not null
-order by 1,2
+SELECT location, date, total_cases, population, 
+(CAST(total_cases AS numeric)/CAST(population AS numeric))*100 AS "Infection Rate"
+FROM coviddeath
+--WHERE location = 'Malaysia'
+WHERE continent IS NOT null
+ORDER BY 1,2
 
 -- latest infection rate by location
 
-select location, max(total_cases) as total_cases, population, 
-max((cast(total_cases as numeric)/cast(population as numeric))*100) as "Infection Rate"
-from coviddeath
+SELECT location, max(total_cases) AS total_cases, population, 
+max((cast(total_cases AS numeric)/cast(population AS numeric))*100) AS "Infection Rate"
+FROM coviddeath
 --where location = 'Malaysia'
-where continent is not null
-group by location , population
-order by "Infection Rate" desc
+WHERE continent IS NOT null
+GROUP BY location , population
+ORDER BY "Infection Rate" DESC
 
 -- Country with Highest Death Count per polulation
 
-select location, max(total_deaths) as total_death
-from coviddeath
+SELECT location, max(total_deaths) AS total_death
+FROM coviddeath
 --where location = 'Malaysia'
-where continent is not null
-group by location
-order by "total_death" desc
+WHERE continent IS NOT null
+GROUP BY location
+ORDER BY "total_death" DESC
 
 
 -- BREAKING THINGS DOWN BY CONTINENT
 -- Showing continents with highest death count per population
 
-select continent, max(total_deaths) as total_death
-from coviddeath
-where continent is not null
-group by continent
-order by total_death desc
+SELECT continent, max(total_deaths) AS total_death
+FROM coviddeath
+WHERE continent IS NOT null
+GROUP BY continent
+ORDER BY total_death DESC
 
 -- Global number
 
-select 
-sum(new_cases) as "total cases", 
-sum(new_deaths) as "total deaths", 
-cast((sum(new_deaths)) as numeric)/cast((sum(new_cases)) as numeric)*100 as "Total death rate" 
-from coviddeath
-where continent is not null
+SELECT 
+SUM(new_cases) AS "total cases", 
+SUM(new_deaths) AS "total deaths", 
+CAST((SUM(new_deaths)) AS numeric)/CAST((SUM(new_cases)) AS numeric)*100 AS "Total death rate" 
+FROM coviddeath
+WHERE continent IS NOT null
 
 -- Total Population vs Vaccinations
 -- Percentage of Population received at least one dose of Covid Vacine
 
-select location, date, population,new_vaccinations, 
-sum(new_vaccinations) over (partition by location order by location,date) as "total vaccine given", 
+SELECT location, date, population,new_vaccinations, 
+SUM(new_vaccinations) OVER (PARTITION BY location ORDER BY location,date) AS "total vaccine given", 
 people_fully_vaccinated,
-(cast (people_fully_vaccinated as numeric)/cast(population as numeric))*100 as "Fully Vaccinated Rate",
-(cast ((sum(new_vaccinations) over (partition by location order by location,date)) as numeric)/cast(population as numeric))*100 as "Vaccination Rate"
-from covidvaccination
-where location = 'Malaysia'
-and continent is not null
-order by date
+(CAST (people_fully_vaccinated AS numeric)/CAST(population AS numeric))*100 AS "Fully Vaccinated Rate",
+(CAST ((SUM(new_vaccinations) OVER (PARTITION BY location ORDER BY location,date)) AS numeric)/CAST(population AS numeric))*100 AS "Vaccination Rate"
+FROM covidvaccination
+WHERE location = 'Malaysia'
+AND continent IS NOT null
+ORDER BY date
 
 -- Using CTE to perform Calculation on Partition By in previous query
 
 With Vaccination_Percentage 
-(location,date,population,new_vaccinations,total_vaccine_given,people_fully_vaccinated) as
+(location,date,population,new_vaccinations,total_vaccine_given,people_fully_vaccinated) AS
 (
-Select 
-dea.location, 
-dea.date, 
-dea.population, 
-vac.new_vaccinations, 
-sum(vac.new_vaccinations) over (partition by vac.location order by vac.location,vac.date) as total_vaccine_given, 
-vac.people_fully_vaccinated
-from coviddeath as dea
-left join covidvaccination as vac
-on dea.location =vac.location and dea.date=vac.date
-where dea.continent is not null
+SELECT 
+  dea.location, 
+  dea.date, 
+  dea.population, 
+  vac.new_vaccinations, 
+  SUM(vac.new_vaccinations) OVER (PARTITION BY vac.location ORDER BY vac.location,vac.date) AS total_vaccine_given, 
+  vac.people_fully_vaccinated
+FROM coviddeath AS dea
+LEFT JOIN covidvaccination AS vac
+ON dea.location =vac.location 
+  AND dea.date=vac.date
+WHERE dea.continent IS NOT null
 )
-select * , (total_vaccine_given/population)*100 as "Vaccination Rate", (cast (people_fully_vaccinated as numeric)/cast (population as numeric))*100 as "Fully Vaccinated Rate" from Vaccination_Percentage
-where location = 'Malaysia'
-order by date
+SELECT * , 
+  (total_vaccine_given/population)*100 AS "Vaccination Rate", 
+  (CAST (people_fully_vaccinated AS numeric)/CAST (population AS numeric))*100 AS "Fully Vaccinated Rate" 
+FROM Vaccination_Percentage
+WHERE location = 'Malaysia'
+ORDER BY date
 
 -- Creating View for Visualization
 
-Create View PercentPopulationVaccinated as
-select location, date, population,new_vaccinations, 
-sum(new_vaccinations) over (partition by location order by location,date) as "total vaccine given", 
+CREATE View PercentPopulationVaccinated AS
+SELECT location, date, population,new_vaccinations, 
+SUM(new_vaccinations) OVER (PARTITION BY location ORDER BY location,date) AS "total vaccine given", 
 people_fully_vaccinated,
-(cast (people_fully_vaccinated as numeric)/cast(population as numeric))*100 as "Fully Vaccinated Rate",
-(cast ((sum(new_vaccinations) over (partition by location order by location,date)) as numeric)/cast(population as numeric))*100 as "Vaccination Rate"
-from covidvaccination
-where continent is not null
+(CAST (people_fully_vaccinated AS numeric)/CAST(population AS numeric))*100 AS "Fully Vaccinated Rate",
+(CAST ((SUM(new_vaccinations) OVER (PARTITION BY location ORDER BY location,date)) AS numeric)/CAST(population AS numeric))*100 AS "Vaccination Rate"
+FROM covidvaccination
+WHERE continent IS NOT null
