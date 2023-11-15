@@ -30,8 +30,8 @@ class TicTaeToe:
         return ' ' in self.board
     
     def num_empty_squares(self):
-        return len(available_moves())
-        # return self.board.count(' ')
+        #return len(available_moves())
+         return self.board.count(' ')
         
     def make_move(self, square, letter):
         #if valid move then make the move (assign square to letter)
@@ -114,7 +114,7 @@ def play(game, player_x, player_o, print_game=True):
         print('it\'s a tie!')
 if __name__ == '__main__':
     player_x = HumanPlayer('X')
-    player_o = RandomComputerPlayer('O')
+    player_o = GeniusComputerPlayer('O')
     t = TicTaeToe()
     play(t,player_x,player_o,print_game=True)
             
